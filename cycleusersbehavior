@@ -1,0 +1,191 @@
+
+#Open Library and install packs to be able apply agregate data
+
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(stringr) 
+library(skimr)
+library(scales)
+library(data.table)
+library(plyr)
+library(viridis)
+
+#Agreagate All 12 files in one file
+
+all_data_base<-bind_rows(X202201_divvy_tripdata,X202202_divvy_tripdata,X202203_divvy_tripdata,X202204_divvy_tripdata,X202205_divvy_tripdata,X202206_divvy_tripdata,X202207_divvy_tripdata,X202208_divvy_tripdata,X202209_divvy_publictripdata,X202210_divvy_tripdata,X202211_divvy_tripdata,X202212_divvy_tripdata)
+
+teste_data<-bind_rows(X202201_divvy_tripdata)
+#Select specific data for analysing 
+
+analyse_data<-select(all_data_base,ride_id,rideable_type,started_at,ended_at,member_casual)
+
+teste_data<-select(teste_data,ride_id,rideable_type,started_at,ended_at,member_casual)
+#remove empty
+analyse_data<-remove_empty(analyse_data, which = c("cols"))
+analyse_data<-remove_empty(analyse_data, which = c("rows"))
+
+teste_data<-remove_empty(teste_data,which = c("cols"))
+teste_data<-remove_empty(teste_data,which = c("rows"))
+#Using mutate code to create timestamp
+analyse_data<-analyse_data%>%mutate(started_at = ymd_hms(as_datetime(started_at)), ended_at = ymd_hms(as_datetime(ended_at)))
+
+teste_data<-teste_data%>%mutate(started_at=ymd_hms(as_datetime(started_at)), ended_at = ymd_hms(as_datetime(ended_at)))
+#convert some files in factor
+
+analyse_data<-analyse_data%>%mutate(rideable_type=as_factor(rideable_type),member_casual=as_factor(member_casual))
+
+analyse_data1<-analyse_data1%>%mutate(rideable_type=as_factor(rideable_type),member_casual=as_factor(member_casual))
+
+
+teste_data1<-teste_data1%>%mutate(rideable_type=as_factor(rideable_type),member_casual=as_factor(member_casual))
+#adjust timestamp
+
+analyse_data1<-analyse_data%>%mutate(hours = hour(started_at), weekday = lubridate::wday(started_at,label = T, abbr = F), month = lubridate::month(started_at, label = T, abbr = F))
+
+teste_data1<-teste_data%>%mutate(hours = hour(started_at), weekday = lubridate::wday(started_at,label = T, abbr = F), month = lubridate::month(started_at, label = T, abbr = F))
+#if you want to separte Date and Hour in different Columns "not necessary in this case"
+
+analyse_data<-analyse_data%>%separate(started_at,into = c("started_date1","started_hour1"),sep = " ")
+
+analyse_data<-analyse_data%>%separate(ended_at,into = c("ended_date2","ended_hour2"),sep = " ")
+
+#Code to Rename Colnames if it´'s necessary
+
+colnames(analyse_data)[4]="started_hour1"
+
+#checking if colmuns were converted in date
+
+glimpse(analyse_data1)
+
+#Calculating period time trip between Start and end columns
+
+analyse_data1$period_time_trip<-difftime(analyse_data1$ended_at,analyse_data$started_at, units = c("mins"))
+
+
+#calculating period time using class diftime and numeric mode
+
+analyse_data1=analyse_data1%>%mutate(period_time_trip=difftime(ended_at,started_at, units = "mins"))
+
+teste_data1=teste_data1%>%mutate(period_time_trip=difftime(ended_at,started_at,units = "mins"))
+#transform date in weekdays another example to use
+
+analyse_data$weekdays<-(weekdays(analyse_data$started_at))
+
+#round numbers in period trip
+analyse_data1$period_time_trip<-format(round(analyse_data1$period_time_trip,digits = 2))
+
+#colsums Form row and column sums and means for numeric arrays (or data frames).
+
+colSums(is.na(analyse_data1))
+
+#view your numbers about data cleaning
+summary(analyse_data1)
+glimpse(analyse_data1)
+summary(all_data_base)
+
+summary(teste_data1)
+
+#Using aggregate you can find results about average trips each collumns 
+
+aggregate(analyse_data1$period_time_trip~analyse_data1$member_casual, FUN = mean)
+
+AVGTRIP=aggregate(analyse_data1$period_time_trip~analyse_data1$member_casual, FUN = mean)
+
+
+sum
+
+aggregate(analyse_data1$period_time_trip~analyse_data1$month, FUN = mean)
+
+#filter for reading more fast
+
+analyse_data2<-analyse_data1%>%filter(between(period_time_trip, 1, 1440))
+
+###
+
+max(analyse_data1$period_time_trip)
+
+analyse_data1%>%group_by(rideable_type)%>%summarise(contagem = n())%>%ggplot(aes(x=rideable_type,y=contagem))+geom_col(position = "stack", fill="steelblue")
+
+analyse_data1%>%na.omit(analyse_data1)%>%group_by(weekday)%>%
+  dplyr::summarise(contagem = n(), na.rm = TRUE)%>%ggplot(aes(x=weekday,y=contagem))+
+  geom_bar(stat = "identity",fill = "steelblue")
+
+analyse_data1%>%group_by(member_casual)%>%summarise(contagem = n())%>%ggplot(aes(x=member_casual,y=reorder(contagem,member_casual)))+geom_bar(stat = "identity",fill="steelblue")+labs(y="Number of Users")
+
+analyse_data1%>%group_by(hours)%>%summarise(contagem = n())%>%ggplot(aes(x=hours,y=contagem))+geom_bar(stat = "identity",fill = "steelblue")
+
+analyse_data1%>%group_by(month)%>%summarise(contagem = n())%>%ggplot(aes(x=month,y=contagem))+geom_bar(stat = "identity",fill = "steelblue")
+
+analyse_data1%>%group_by(period_time_trip)%>%ggplot(aes(x=member_casual,y=reorder(period_time_trip,member_casual)))+geom_bar(stat = "identity", fill = "steelblue")
+
+ggplot(teste_data1,aes(x=rideable_type,y=period_time_trip, color=member_casual))+geom_point()
+
+
+analyse_data1%>%group_by(rideable_type)%>%summarise(contagem = n())%>%ggplot(aes(x=period_time_trip,y=contagem))+geom_col(position = "stack", fill="steelblue")
+
+
+#################################### TEST
+
+ggplot(data=analyse_data1,aes(x=member_casual))+geom_bar()
+
+
+filter(analyse_data1, member_casual == 'casual')
+
+
+weekdays23<-analyse_data1%>%group_by(weekday)%>%summarise(contagem = n())
+
+str(analyse_data1)
+
+
+hours_table<-analyse_data1%>%group_by(member_casual,hours)%>%summarise(N_users = n(),avg_trip_mins = mean(period_time_trip),total_trip = sum(period_time_trip))
+
+hours_table%>%ggplot(aes(x=hours,y=N_users,fill=member_casual))+geom_bar(stat = "identity")
+
+hours_table%>%ggplot(aes(x=hours,y=avg_trip_mins,fill=member_casual))+geom_bar(stat = "identity")
+
+hours_table%>%ggplot(aes(x=hours,y=total_trip,fill=member_casual))+geom_bar(stat = "identity")
+
+
+week_table<-analyse_data1%>%group_by(member_casual,weekday)%>%summarise(N_users = n(),avg_trip_mins = mean(period_time_trip),total_trip = sum(period_time_trip))
+
+
+week_table%>%ggplot(aes(x=weekday,y=N_users,fill=member_casual))+geom_bar(stat = "identity")
+
+week_table%>%ggplot(aes(x=weekday,y=avg_trip_mins,fill=member_casual))+geom_bar(stat = "identity")
+
+week_table%>%ggplot(aes(x=weekday,y=total_trip, fill=member_casual))+geom_bar(stat = "identity")
+
+
+month_table<-analyse_data1%>%group_by(member_casual,month)%>%summarise(N_users = n(),avg_trip_mins = mean(period_time_trip), total_trip = sum(period_time_trip))
+
+
+month_table%>%ggplot(aes(x=month,y=N_users,fill=member_casual))+geom_bar(stat = "identity")
+
+month_table%>%ggplot(aes(x=month,y=avg_trip_mins, fill=member_casual))+geom_bar(stat = "identity")
+
+month_table%>%ggplot(aes(x=month,y=total_trip,fill=member_casual))+geom_bar(stat = "identity")
+
+
+#####################################test
+
+na.omit(all_data_base)
+na.omit(analyse_data1)
+
+all_data_base%>%na.omit(all_data_base)%>%group_by(start_station_name)%>%summarise(contagem = n())%>%arrange(desc(contagem))%>%slice(1:10)
+
+
+all_data_base%>%na.omit(all_data_base)%>%group_by(start_station_name)%>%summarise(contagem = n())%>%arrange(desc(contagem))%>%slice(1:10)%>%ggplot(aes(x=contagem,y=start_station_name))+geom_bar(stat = "identity")
+
+all_data_base%>%na.omit(all_data_base)%>%group_by(end_station_name)%>%summarise(contagem = n())%>%arrange(desc(contagem))%>%slice(1:10)
+
+all_data_base%>%na.omit(all_data_base)%>%group_by(end_station_name)%>%summarise(contagem = n())%>%arrange(desc(contagem))%>%slice(1:5)%>%ggplot(aes(x=contagem,y=reorder(contagem,end_station_name)))+geom_bar(stat = "identity",fill = "steelblue")+labs(x="teste",y="End station")
+
+
+analyse_data1%>%group_by(analyse_data1$period_time_trip,analyse_data1$weekday)%>%
+
+analyse_data1%>%
