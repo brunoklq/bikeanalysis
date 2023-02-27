@@ -70,6 +70,14 @@ na.omit(all_data_base)
 na.omit(analyse_data1)
 
 
+#figure out 10 most popular stations to start and to end 
+
+top_stations_start_end<-all_data_base%>%select(start_station_name,end_station_name)
+
+top_stations_start_end%>%na.omit(top_stations_start_end)
+%>%group_by(start_station_name)%>%summarise(count = n())
+%>%arrange(desc(count))
+
 #calculating period time using class diftime and numeric mode
 
 analyse_data1=analyse_data1%>%mutate(period_time_trip=difftime(ended_at,started_at, units = "mins"))
